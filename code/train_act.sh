@@ -1,3 +1,16 @@
+# LeRobot default settings
+# Batch size: 8
+# Training steps: 100,000
+# Optimizer: AdamW
+# Learning rate: 1e-5
+# Seed: 1000
+
+# Changed settings
+# Chunk size: 20 (0.4 seconds at 50 Hz)
+# Temporal ensembling: enabled (coefficient: 0.01)
+# Predict actions at every step (n_action_steps: 1)
+# Combine multiple predictions for each action
+# Normalize environment state
 set -e
 N=$1
 lerobot-train \
@@ -5,7 +18,8 @@ lerobot-train \
   --dataset.root=data/lerobot_$N \
   --policy.type=act \
   --policy.chunk_size=20 \
-  --policy.n_action_steps=10 \
+  --policy.n_action_steps=1 \
+  --policy.temporal_ensemble_coeff=0.01 \
   --policy.normalization_mapping='{"STATE": "MEAN_STD", "ENV": "MEAN_STD", "ACTION": "MEAN_STD"}' \
   --policy.device=cuda \
   --policy.push_to_hub=false \
