@@ -12,11 +12,11 @@ def student(obs):
     action = postprocess(policy.select_action(batch))
     return np.clip(action[0].numpy(), -1.0, 1.0)
 
-teacher_success = pd.read_csv("outputs/eval_teacher.csv")["success"].mean()
+teacher_success = pd.read_csv("results/evaluation_results/teacher_ppo_eval_success_distance_length_per_episode.csv")["success"].mean()
 rows = []
 for num_demos in sys.argv[1:]:
-    name = f"act_{num_demos}"
-    path = f"models/{name}/checkpoints/last/pretrained_model"
+    name = f"student_act_{num_demos}_demos"
+    path = f"trained_models/{name}_lerobot_checkpoint/checkpoints/last/pretrained_model"
     policy = ACTPolicy.from_pretrained(path, strict=True)
     preprocess, postprocess = make_pre_post_processors(policy.config, pretrained_path=path)
     student_success = run_eval_policy(student, name, reset_policy=policy.reset)
@@ -27,6 +27,6 @@ for num_demos in sys.argv[1:]:
         "student_success": student_success,
         "eval_episodes": len(eval_seeds),
     })
-pd.DataFrame(rows).to_csv("outputs/summary.csv", index=False)
+pd.DataFrame(rows).to_csv("results/evaluation_results/teacher_vs_student_success_rates.csv", index=False)
 print(pd.DataFrame(rows))
 print("evaluate student finished")

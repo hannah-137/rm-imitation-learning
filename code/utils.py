@@ -15,7 +15,21 @@ from brax.training.agents.ppo import networks as ppo_networks
 from brax.training.acme import running_statistics
 from brax.io import model
 
-for folder in ["data","outputs","records","videos","models"]:
+for folder in [
+    "configs/teacher_training_configs",
+    "configs/demo_collection_configs",
+    "configs/student_training_configs",
+    "configs/evaluation_configs",
+    "configs/software_and_hardware_info",
+    "results/teacher_training_results",
+    "results/demo_collection_results",
+    "results/student_training_results",
+    "results/evaluation_results",
+    "videos/teacher_demo_videos",
+    "videos/evaluation_videos",
+    "lerobot_datasets_for_act_training",
+    "trained_models",
+]:
     os.makedirs(folder, exist_ok=True)
 
 env_name = "PandaPickCube"
@@ -29,7 +43,7 @@ env = registry.load(env_name, config_overrides={"impl": impl})
 reset = jax.jit(env.reset)
 step = jax.jit(env.step)
 
-teacher_path = "data/teacher_params.pkl"
+teacher_path = "trained_models/teacher_ppo_policy_weights.pkl"
 def load_teacher():
     if not os.path.exists(teacher_path):
         raise FileNotFoundError(f"{teacher_path} not found. Run train_teacher.py first.")
@@ -87,7 +101,7 @@ def get_episode_info(seed, obs, actions, last_state):
 def make_demo_video(states, name):
     frames = env.render(states[::2], height=480, width=640)
     media.write_video(f"videos/{name}.mp4", frames, fps=round(1.0 / env.dt / 2))
-    media.write_image(f"outputs/{name}_frames.png", make_demo_image(states))
+    media.write_image(f"videos/{name}_frames.png", make_demo_image(states))
 
 def make_demo_image(states):
     frames = env.render(states[::30], height=240, width=320)
@@ -95,18 +109,16 @@ def make_demo_image(states):
 
 def run_eval_policy(policy, name, reset_policy=None):
     rows = []
-    saved = []
+    os.makedirs(f"videos/evaluation_videos/{name}_eval_videos", exist_ok=True)
     for seed in eval_seeds:
         if reset_policy is not None:
             reset_policy()
         states, obs, actions, rewards = run(seed, policy)
         rows.append(get_episode_info(seed, obs, actions, states[-1]))
         kind = "success" if rows[-1]["success"] else "failure"
-        if kind not in saved:
-            make_demo_video(states, f"{name}_{kind}")
-            saved.append(kind)
+        make_demo_video(states, f"evaluation_videos/{name}_eval_videos/{name}_eval_seed{seed}_{kind}")
     table = pd.DataFrame(rows)
-    table.to_csv(f"outputs/eval_{name}.csv", index=False)
+    table.to_csv(f"results/evaluation_results/{name}_eval_success_distance_length_per_episode.csv", index=False)
     print(name, "success rate:", table["success"].mean())
     return table["success"].mean()
 

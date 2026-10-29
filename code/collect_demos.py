@@ -13,14 +13,15 @@ for seed in demo_seeds:
     states, obs, actions, rewards = run(seed, teacher)
     episodes.append([obs, actions, rewards])
     infos.append(get_episode_info(seed, obs, actions, states[-1]))
+    kind = "success" if infos[-1]["success"] else "failure"
+    make_demo_video(states, f"teacher_demo_videos/teacher_demo_seed{seed}_{kind}")
     if infos[-1]["success"] and len(success_demos) < 4:
         success_demos.append(states)
 demos = pd.DataFrame(infos)
-demos.to_csv("outputs/demos.csv", index=False)
+demos.to_csv("results/demo_collection_results/teacher_demo_success_distance_length_per_episode.csv", index=False)
 
 successful = demos[demos["success"]]
 stats = {
-    "demo_seeds": demo_seeds,
     "num_trajectories": len(demos),
     "length_mean": demos["length"].mean(),
     "length_std": demos["length"].std(),
@@ -28,7 +29,12 @@ stats = {
     "first_step_near_target_mean": successful["first_step_near_target"].mean(),
     "first_step_near_target_std": successful["first_step_near_target"].std(),
 }
-json.dump(stats, open("outputs/demo_summary.json", "w"), indent=2)
+json.dump(stats, open("results/demo_collection_results/teacher_demo_count_length_success_rate.json", "w"), indent=2)
+demo_config = {
+    "demo_seeds": demo_seeds,
+    "dataset_sizes": [100, 25],
+}
+json.dump(demo_config, open("configs/demo_collection_configs/teacher_demo_collection_seeds_and_dataset_sizes.json", "w"), indent=2)
 
 # demos to LeRobot datasets
 features = {
@@ -42,7 +48,7 @@ for num_demos in [100, 25]:
         f"local/pick_cube_{num_demos}",
         fps=50,
         features=features,
-        root=f"data/lerobot_{num_demos}",
+        root=f"lerobot_datasets_for_act_training/lerobot_dataset_for_act_training_first_{num_demos}_teacher_demos",
         use_videos=False
     )
     for obs, actions, rewards in episodes[:num_demos]:
@@ -55,9 +61,8 @@ for num_demos in [100, 25]:
     dataset.finalize()
 
 # save demo videos and images
-make_demo_video(success_demos[0], "teacher_demo")
 strips = []
 for states in success_demos:
     strips.append(make_demo_image(states))
-media.write_image("outputs/demo_frames.png", np.concatenate(strips, axis=0))
+media.write_image("results/demo_collection_results/teacher_demo_frames_first_4_successes.png", np.concatenate(strips, axis=0))
 print("collect demos finished")

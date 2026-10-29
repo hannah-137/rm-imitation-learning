@@ -1,4 +1,4 @@
-from utils import env, eval_seeds, env_name, impl, run_eval_policy, load_teacher, teacher_path
+from utils import env, eval_seeds, success_dist, env_name, impl, run_eval_policy, load_teacher, teacher_path
 import functools
 import time
 import jax
@@ -41,18 +41,24 @@ print("ppo teacher train finished")
 
 # evaluate ppo teacher and save results
 teacher = load_teacher()
-teacher_success = run_eval_policy(teacher, "teacher")
+teacher_success = run_eval_policy(teacher, "teacher_ppo")
 config = {
     "env": "PandaPickCube",
     "impl": "jax",
     "env_config": registry.get_default_config("PandaPickCube").to_dict(),
     "ppo_config": ppo_params.to_dict(),
     "ppo_seed": ppo_seed,
-    "eval_seeds": eval_seeds,
+}
+json.dump(config, open("configs/teacher_training_configs/teacher_ppo_env_and_training_config_and_seed.json", "w"), indent=2)
+training_log = {
     "teacher_train_minutes": ppo_minutes,
     "ppo_progress": progress,
-    "teacher_eval_success": teacher_success
 }
-json.dump(config, open("records/teacher_summary.json", "w"), indent=2)
+json.dump(training_log, open("results/teacher_training_results/teacher_ppo_training_time_and_reward_log.json", "w"), indent=2)
+eval_config = {
+    "eval_seeds": eval_seeds,
+    "success_dist": success_dist,
+}
+json.dump(eval_config, open("configs/evaluation_configs/eval_seeds_and_success_rule.json", "w"), indent=2)
 print(json.dumps(config, indent=2))
 print("ppo teacher evaluate finished")
