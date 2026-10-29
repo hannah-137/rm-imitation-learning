@@ -1,11 +1,11 @@
-# LeRobot default settings
+# LeRobot default
 # Batch size: 8
 # Training steps: 100,000
 # Optimizer: AdamW
 # Learning rate: 1e-5
 # Seed: 1000
 
-# Changed settings
+# Changed
 # Chunk size: 20 (0.4 seconds at 50 Hz)
 # Temporal ensembling: enabled (coefficient: 0.01)
 # Predict actions at every step (n_action_steps: 1)

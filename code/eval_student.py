@@ -29,3 +29,4 @@ for num_demos in sys.argv[1:]:
     })
 pd.DataFrame(rows).to_csv("outputs/summary.csv", index=False)
 print(pd.DataFrame(rows))
+print("evaluate student finished")

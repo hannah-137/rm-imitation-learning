@@ -5,23 +5,49 @@ os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 os.environ["JAX_DEFAULT_MATMUL_PRECISION"] = "highest"  
 
 import jax
+import functools
 from mujoco_playground import registry
-
+from mujoco_playground.config import manipulation_params
 import numpy as np
 import pandas as pd
 import mediapy as media
+from brax.training.agents.ppo import networks as ppo_networks
+from brax.training.acme import running_statistics
+from brax.io import model
 
 for folder in ["data","outputs","records","videos","models"]:
     os.makedirs(folder, exist_ok=True)
 
+env_name = "PandaPickCube"
+impl = "jax"
 episode_length = 150
-demo_seeds = list(range(100))
-eval_seeds = list(range(1000, 1050))
 success_dist = 0.05
+eval_seeds = list(range(1000, 1050))
+demo_seeds = list(range(100))
 
-env = registry.load("PandaPickCube", config_overrides={"impl": "jax"})
+env = registry.load(env_name, config_overrides={"impl": impl})
 reset = jax.jit(env.reset)
 step = jax.jit(env.step)
+
+teacher_path = "data/teacher_params.pkl"
+def load_teacher():
+    if not os.path.exists(teacher_path):
+        raise FileNotFoundError(f"{teacher_path} not found. Run train_teacher.py first.")
+    ppo_params = manipulation_params.brax_ppo_config(env_name, impl)
+    network_factory = functools.partial(ppo_networks.make_ppo_networks, **ppo_params.network_factory)
+    network = network_factory(
+        env.observation_size, 
+        env.action_size,
+        preprocess_observations_fn=running_statistics.normalize
+    )
+    params = model.load_params(teacher_path)
+    teacher_policy = jax.jit(ppo_networks.make_inference_fn(network)(params, deterministic=True))
+    key = jax.random.PRNGKey(0)
+
+    def teacher(obs):
+        action, _ = teacher_policy(obs, key)
+        return action
+    return teacher
 
 def run(seed, policy):
     state = reset(jax.random.PRNGKey(seed))
